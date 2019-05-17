@@ -6,10 +6,11 @@ const shell = require('shelljs')
 
 const [, , command, ...flags] = process.argv
 const validCommands = ['deploy', 'remove', 'invoke']
-const args = {
+const data = {
   stack: getValue('--stack'),
   stage: getStage(),
   stacks: [],
+  regions: [],
 }
 
 /**
@@ -57,20 +58,40 @@ function getStage() {
 }
 
 /**
- * Execute a serverless command.
+ * Execute a serverless command in a stack.
  * @param {string} stackName The name of the stack.
- * @param  {string[]} args The command line arguments.
  */
-function execute(stackName, ...args) {
+function executeOnStack(stackName) {
+
+  const exec = function(commands) {
+    console.log(`\n\n\x1b[32mExecuting command in the stack '${stackName}': \x1b[0msls ${commands}\n\n`)
+    shell.exec(`sls ${commands} --colors always`)
+  }
+
   const stackPath = path.resolve(stackName)
+
   if (!fs.existsSync(stackPath)) {
     console.error(`The folder "${stackPath}" don't exists.`)
     return
   }
 
-  console.log(`\n\n\x1b[33mExecuting commanding in the stack: \x1b[0m${stackName}\n\n`)
   shell.cd(stackName.trim())
-  shell.exec(`sls ${args.join(' ')} --colors always`)
+
+  let commandsBase = `${command} ${flags.join(' ')}`
+
+  if (process.env.REGIONS) {
+    removeFlag('--region')
+    data.regions = process.env.REGIONS.split(',')
+
+    for (let index = 0; index < data.regions.length; index++) {
+      const region = data.regions[index].trim()
+      exec(`${commandsBase} --region ${region}`)
+    }
+    return
+  }
+
+  exec(commandsBase)
+
   shell.cd('..')
 }
 
@@ -84,17 +105,17 @@ function haveError() {
   }
 
   if (!validCommands.includes(command)) {
-    console.error(`Multi Stack Serverless CLI can't resolve the command: ${command}`)
+    console.error(`Multi Stack Serverless CLI can't resolve the command: ${command == undefined ? '' : command}`)
     return true
   }
 
-  if (!args.stage) {
+  if (!data.stage) {
     console.error('You must set a stage to deploy to the corresponding .env file.')
     return true
   }
 
-  if (!fs.existsSync(path.resolve(`.env.${args.stage}`))) {
-    console.error(`No env file present for the current environment: ${args.stage}`)
+  if (!fs.existsSync(path.resolve(`.env.${data.stage}`))) {
+    console.error(`No env file present for the current environment: ${data.stage}`)
     return true
   }
 
@@ -105,23 +126,23 @@ function haveError() {
  * Execute the commands.
  */
 function executeCommands() {
-  if (args.stack) {
+  if (data.stack) {
     removeFlag('--stack')
-    execute(args.stack, command, flags)
+    executeOnStack(data.stack)
     return
   }
 
-  require('custom-env').env(args.stage)
+  require('custom-env').env(data.stage)
 
   if (!process.env.STACKS) {
-    console.error(`Set STACKS field in the file: .env.${args.stage}`)
+    console.error(`Set STACKS field in the file: .env.${data.stage}`)
     return
   }
 
-  args.stacks = process.env.STACKS.split(',')
+  data.stacks = process.env.STACKS.split(',')
 
-  for (let index = 0; index < args.stacks.length; index++) {
-    execute(args.stacks[index], command, flags)
+  for (let index = 0; index < data.stacks.length; index++) {
+    executeOnStack(data.stacks[index])
   }
 }
 
