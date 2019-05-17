@@ -1,11 +1,12 @@
 {
   "name": "multi-stack-serverless-cli",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A command line interface to manage multiples stacks with Serverless Framework.",
   "scripts": {},
   "keywords": [],
   "author": "Bruno Araujo <bruno@lavaleakgames.com>",
   "license": "MIT",
+  "main": "src/index.js",
   "dependencies": {
     "custom-env": "^1.0.1",
     "shelljs": "^0.8.3"

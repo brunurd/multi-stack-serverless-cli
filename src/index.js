@@ -110,16 +110,16 @@ function executeCommands() {
     execute(args.stack, command, flags)
     return
   }
-  
+
   require('custom-env').env(args.stage)
-  
+
   if (!process.env.STACKS) {
     console.error(`Set STACKS field in the file: .env.${args.stage}`)
     return
   }
-  
+
   args.stacks = process.env.STACKS.split(',')
-  
+
   for (let index = 0; index < args.stacks.length; index++) {
     execute(args.stacks[index], command, flags)
   }
@@ -127,3 +127,5 @@ function executeCommands() {
 
 if (!haveError())
   executeCommands()
+
+module.exports = { haveError, executeCommands }
